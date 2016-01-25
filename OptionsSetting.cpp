@@ -6,7 +6,8 @@
 OptionsSetting::OptionsSetting( QWidget *parent /*= NULL*/ )
 	:QWidget(parent)
 {
-	this->setAutoFillBackground(true);
+	setAutoFillBackground(true);
+
 	m_pConditions = new SimpleMatchConditions(this);
 	m_pFileDirList = new FileDirList(this);
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include <QtGui/QFrame>
-class QFrame;
+
 class QListWidget;
 class QPushButton;
 class QLabel;

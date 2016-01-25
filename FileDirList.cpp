@@ -3,16 +3,17 @@
 FileDirList::FileDirList( QWidget * parent /*= NULL*/ )
 	:QFrame(parent)
 {
-	this->setFrameStyle(QFrame::WinPanel|QFrame::Raised);
+	this->setFrameStyle(QFrame::WinPanel|QFrame::Raised);//设置凸起的效果
+
 	m_pTitleLabel = new QLabel(tr("FileDir"),this);
 	m_pFileDirList = new QListWidget(this);
 	
 	m_pAddFileDir = new QPushButton(tr("+"),this);
 	m_pRemoveFileDir = new QPushButton(tr("-"),this);
+
 	connect(m_pAddFileDir,SIGNAL(clicked()),this,SLOT(addFileDir()));
 	connect(m_pRemoveFileDir,SIGNAL(clicked()),this,SLOT(removeFileDir()));
 }
-
 
 FileDirList::~FileDirList(void)
 {
@@ -52,12 +53,9 @@ void FileDirList::addFileDir()
 
 void FileDirList::removeFileDir()
 {
-
-	m_pFileDirList->removeItemWidget( m_pFileDirList->currentItem());
+	m_pFileDirList->removeItemWidget(m_pFileDirList->currentItem());
 	delete m_pFileDirList->currentItem();//must be do "delete",otherwise in vain
 }
-
-
 
 QMap<QString,Qt::CheckState> FileDirList::getFileDirMap()
 {

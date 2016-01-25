@@ -1,14 +1,9 @@
 #include "MyTableView.h"
-#include "mainwindow.h"
+#include "global.h"
+#include "MySortFilterProxyModel.h"
 #include <QtGui>
 #include <QFile>
-extern bool stopflag;
-extern QList<QString> conditonsList;
-extern QMultiMap<QString,QString>namesInfoMultiMap;
-extern QMultiMap<QString,QString>MD5InfoMultiMap;
-extern QMultiMap<qint64,QString>sizesInfoMultiMap;
-extern std::multimap<QString,QString,cmp>resResult;
-extern QMap<QString, QList<tableData> >fileInfoMap; 
+#include <QDataStream>
 void OpenExplorerAndSelectFile(const QString &filePath)
 {
 	QString path = QDir::toNativeSeparators(filePath);
@@ -25,19 +20,28 @@ void OpenExplorerAndSelectFile(const QString &filePath)
 MyTableView::MyTableView( QWidget *parent /*= NULL*/ )
 	:QTableView(parent)
 {
-	
 	m_pModel = new QStandardItemModel();
+	/*setModel(m_pModel);*/
+	m_pProxyModel = new MySortFilterProxyModel(this);
+	m_pProxyModel->setSourceModel(m_pModel);
+	setModel(m_pProxyModel);
+
+	setSelectionBehavior(QAbstractItemView::SelectRows);//set all a row selected
+	verticalHeader()->setVisible(false); //hide column header
+	this->setShowGrid(false); //hide line
+	setAlternatingRowColors(true);
+
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	m_pContextMenu = new QMenu(this);
 
 	m_pOpenDir = new QAction("open Directory",this);
 	m_pContextMenu->addAction(m_pOpenDir);
 
-	
+	setSortingEnabled(true);
 
 	connect(this,SIGNAL(customContextMenuRequested(const QPoint &)),
 		this,SLOT(showContextMenu(const QPoint &)));
-	connect(this,SIGNAL(setModelSignal()),this,SLOT(setModelSlot()));
+	connect(this,SIGNAL(screenFileInfoMapSignal()),this,SLOT(screenFileInfoMapSlot()));
 }
 
 
@@ -45,361 +49,137 @@ MyTableView::~MyTableView(void)
 {
 }
 
-void MyTableView::screenItem()
-{	
-	QMultiMap<qint64,QString> sizesTempMap;
-	QMultiMap<QString,QString> MD5TempMap;
-	QMultiMap<QString,QString>::iterator iterName;
-	QMultiMap<qint64,QString>::iterator iterSizes;
-	QMultiMap<QString,QString>::iterator iterMD5;
-	QFileInfo fileInfo;
-	int cntName,cntSize,cntMD5,i;
-	if (conditonsList.count("names"))
-	{
-		for (iterName=namesInfoMultiMap.begin();iterName!=namesInfoMultiMap.end();)
-		{
-			if (stopflag)
-			{
-				sizesTempMap.clear();
-				MD5TempMap.clear();
-				cntName = namesInfoMultiMap.count(iterName.key());
-				if (cntName>1)
-				{
-
-					if (conditonsList.count("sizes"))
-					{
-						for (i=0;i<cntName;i++,iterName++)
-						{
-							fileInfo.setFile(iterName.value());
-							sizesTempMap.insert(fileInfo.size(),iterName.value());
-						}
-						for (iterSizes=sizesTempMap.begin();iterSizes!=sizesTempMap.end();)
-
-						{
-							MD5TempMap.clear();
-							cntSize = sizesTempMap.count(iterSizes.key());
-							if (cntSize>1)
-							{
-
-								if (conditonsList.count("MD5"))
-								{
-									for (i=0;i<cntSize;i++,iterSizes++)
-									{
-										fileInfo.setFile(iterSizes.value());
-										MD5TempMap.insert(MD5InfoMultiMap.key(iterSizes.value()),
-											iterSizes.value());
-									}
-									for (iterMD5=MD5TempMap.begin();
-										iterMD5!=MD5TempMap.end();)
-									{
-										cntMD5 = MD5TempMap.count(iterMD5.key());
-										if (cntMD5>1)
-										{
-											for (i=0;i<cntMD5;i++,iterMD5++)
-											{
-												addOneItem(iterMD5.value(),MD5TempMap);
-												//resResult.insert(std::make_pair(iterMD5.value(),
-													//MD5TempMap.key(iterMD5.value())));
-											}
-										}
-										else
-										{
-											iterMD5++;
-										}
-									}
-								}
-								else
-								{
-									for (i=0;i<cntSize;i++,iterSizes++)
-									{
-										addOneItem(iterSizes.value(),MD5InfoMultiMap);
-										//resResult.insert(std::make_pair(iterSizes.value(),
-											//MD5InfoMultiMap.key(iterSizes.value())));
-									}
-								}
-
-							}
-							else
-							{
-								iterSizes++;
-							}
-						}
-					}
-					else
-					{
-						if (conditonsList.count("MD5"))
-						{
-							for (i=0;i<cntName;i++,iterName++)
-							{
-								fileInfo.setFile(iterName.value());
-								MD5TempMap.insert(MD5InfoMultiMap.key(iterName.value()),
-									iterName.value());
-							}
-							//MD5
-							for (iterMD5=MD5TempMap.begin();iterMD5!=MD5TempMap.end();)
-							{
-								cntMD5 = MD5TempMap.count(iterMD5.key());
-								if (cntMD5>1)
-								{
-									for (i=0;i<cntMD5;i++,iterMD5++)
-									{
-										addOneItem(iterMD5.value(),MD5TempMap);
-										//resResult.insert(std::make_pair(iterMD5.value(),
-											//MD5TempMap.key(iterMD5.value())));
-									}
-								}
-								else
-								{
-									iterMD5++;
-								}
-							}
-						}
-						else
-						{
-							for (i=0;i<cntName;i++,iterName++)
-							{
-								addOneItem(iterName.value(),MD5InfoMultiMap);
-								//resResult.insert(std::make_pair(iterName.value(),
-									//MD5InfoMultiMap.key(iterName.value())));
-							}
-						}
-					}
-
-
-				}
-				else
-				{
-					iterName++;
-				}
-			}
-			
-				
-		}
-	}
-	else
-	{
-		if(conditonsList.count("sizes"))
-		{
-			for (iterSizes=sizesInfoMultiMap.begin();iterSizes!=sizesInfoMultiMap.end();)
-			{
-				if (stopflag)
-				{
-					MD5TempMap.clear();
-					cntSize = sizesInfoMultiMap.count(iterSizes.key());
-					if (cntSize>1)
-					{
-
-						if (conditonsList.count("MD5"))
-						{
-							for (i=0;i<cntSize;i++,iterSizes++)
-							{
-								fileInfo.setFile(iterSizes.value());
-								MD5TempMap.insert(MD5InfoMultiMap.key(iterSizes.value()),
-									iterSizes.value());
-							}
-							for (iterMD5=MD5TempMap.begin();
-								iterMD5!=MD5TempMap.end();)
-							{
-								cntMD5 = MD5TempMap.count(iterMD5.key());
-								if (cntMD5>1)
-								{
-									for (i=0;i<cntMD5;i++,iterMD5++)
-									{
-										addOneItem(iterMD5.value(),MD5TempMap);
-										//resResult.insert(std::make_pair(iterMD5.value(),
-											//MD5TempMap.key(iterMD5.value())));
-									}
-								}
-								else
-								{
-									iterMD5++;
-								}
-							}
-						}
-						else
-						{
-							for (i=0;i<cntSize;i++,iterSizes++)
-							{
-								addOneItem(iterSizes.value(),MD5InfoMultiMap);
-								//resResult.insert(std::make_pair(iterSizes.value(),
-									//MD5InfoMultiMap.key(iterSizes.value())));
-							}
-						}
-					}
-					else
-					{
-						iterSizes++;
-					}
-				}
-				
-			}
-		}
-		else
-		{
-			if (stopflag)
-			{
-				if (conditonsList.count("MD5"))
-				{
-					for (iterMD5=MD5InfoMultiMap.begin();iterMD5!=MD5InfoMultiMap.end();)
-					{
-						cntMD5 = MD5InfoMultiMap.count(iterMD5.key());
-						if (cntMD5>1)
-						{
-							for (i=0;i<cntMD5;i++,iterMD5++)
-							{
-								qDebug()<<iterMD5.value()<<endl;
-								addOneItem(iterMD5.value(),MD5InfoMultiMap);
-								//resResult.insert(std::make_pair(iterMD5.value(),
-									//MD5InfoMultiMap.key(iterMD5.value())));
-							}
-						}
-						else
-						{
-							iterMD5++;
-						}
-					}
-				}
-				else
-				{
-					return;
-				}
-			}
-			
-		}
-	}
-}
-
-void MyTableView::addOneItem(QString file,QMultiMap<QString,QString> &MD5Map)
-{
-	QFileInfo fileInfo;
-	fileInfo.setFile(file);
-	int row = m_pModel->rowCount();
-	m_pModel->insertRow(row);
-	m_pModel->setItem(row,0,new QStandardItem(fileInfo.fileName()));
-	m_pModel->setItem(row,1,new QStandardItem(fileInfo.path()));
-	m_pModel->setItem(row,2,new QStandardItem(QString::number(fileInfo.size())));
-	m_pModel->setItem(row,3,new QStandardItem(fileInfo.lastRead().toString()));
-	m_pModel->setItem(row,4,new QStandardItem(MD5Map.key(file)));
-}
-
 void MyTableView::clearItem()
 {
 	m_pModel->clear();
 }
 
-void MyTableView::clearModel()
+bool MyTableView::writeResult( QMap<QString, QList<TableData> >&writeFileInfoMap,
+	QString fileName /* = tr("result.txt") */)
 {
-	setModel(NULL);
+	QFile file(fileName);
+	if (!file.open(QFile::WriteOnly))
+	{
+		return false;
+	}
+	QDataStream out(&file);
+	out.setVersion(QDataStream::Qt_4_7);//统一输入输出流接口
+	out<<writeFileInfoMap;
+	file.close();
+	return true;
 }
 
-void MyTableView::setModelSlot()
+void MyTableView::screenFileInfoMapSlot()
 {
+	QMap<QString, QList<TableData> >writeFileInfoMap;
+	QMap<QString, QList<TableData> >::iterator iterMap;
+	QList<TableData> dataList;
 
+	for (iterMap = fileInfoMap.begin();iterMap!= fileInfoMap.end();iterMap++)
+	{
+		dataList = iterMap.value();
+		if (dataList.count()>1)
+		{
+			writeFileInfoMap.insert(iterMap.key(),dataList);
+		}
+	}
+	writeResult(writeFileInfoMap);
+}
+void MyTableView::loadResult()
+{
+	QMap<QString, QList<TableData> >loadFileInfoMap;
+	QMap<QString, QList<TableData> >::iterator iterMap;
+	QList<TableData>::iterator iterList;
+	QList<TableData> dataList;
+	QStandardItem *p;
+	int row,tableRow;
+	QString dataFlag;
+	QString fileName = QFileDialog::getOpenFileName(this,tr("select Folds"),"./","*.txt");
+	QFile file(fileName);
+	if (!file.open(QIODevice::ReadOnly))
+		return;
+	clearItem();
+	QDataStream in(&file);
+	in.setVersion(QDataStream::Qt_4_7);
+	
 	m_pModel->setColumnCount(5);
 	m_pModel->setHeaderData(0,Qt::Horizontal,tr("FileName"));
 	m_pModel->setHeaderData(1,Qt::Horizontal,tr("Path"));
 	m_pModel->setHeaderData(2,Qt::Horizontal,tr("Size"));
 	m_pModel->setHeaderData(3,Qt::Horizontal,tr("Date"));
 	m_pModel->setHeaderData(4,Qt::Horizontal,tr("MD5"));
-	setModel(m_pModel);
-	
-	/*
-	QFileInfo fileInfo;
-	std::multimap<QString,QString,cmp>::iterator iter= resResult.begin();
-	for (;iter!=resResult.end();iter++)
-	{
-		fileInfo.setFile(iter->first);
-		int row = m_pModel->rowCount();
-		m_pModel->insertRow(row);
-		m_pModel->setItem(row,0,new QStandardItem(fileInfo.fileName()));
-		m_pModel->setItem(row,1,new QStandardItem(fileInfo.path()));
-		m_pModel->setItem(row,2,new QStandardItem(QString::number(fileInfo.size())));
-		m_pModel->setItem(row,3,new QStandardItem(fileInfo.lastRead().toString()));
-		m_pModel->setItem(row,4,new QStandardItem(iter->second));
-	}*/
 
-	//method 2
-	
-	QMap<QString, QList<tableData> >::iterator iterMap;
-	QList<tableData>::iterator iterList;
-	QList<tableData> dataList;
-	int tableRow=0;
-	for (iterMap = fileInfoMap.begin();iterMap!= fileInfoMap.end();iterMap++)
+	in>>loadFileInfoMap;
+	tableRow =0;
+	for (iterMap = loadFileInfoMap.begin();iterMap!= loadFileInfoMap.end();iterMap++)
 	{
 		dataList = iterMap.value();
-		if (dataList.count()>1)
-		{
-			tableRow+=dataList.count();
-		}
+		tableRow+=dataList.count();
 	}
 	m_pModel->setRowCount(tableRow);
-	//qDebug()<<"tableRow = "<<tableRow<<endl;
-	int row =0;
-	for (iterMap = fileInfoMap.begin();iterMap!= fileInfoMap.end();iterMap++)
+	row = 0;
+	for (iterMap = loadFileInfoMap.begin();iterMap!= loadFileInfoMap.end();iterMap++)
 	{
 		dataList = iterMap.value();
-		if (dataList.count()>1)
+		for (iterList=dataList.begin();iterList!= dataList.end();iterList++)
 		{
-			for (iterList=dataList.begin();iterList!= dataList.end();iterList++)
-			{
-				tableData tData = *iterList;
-				QStandardItem *p=NULL;
+			
+			p= new QStandardItem(iterList->fileName);
+			p->setEditable(false);
+			m_pModel->setItem(row,0,p);
 
-				p= new QStandardItem(tData.fileName);
-				p->setEditable(false);
-				m_pModel->setItem(row,0,p);
+			p= new QStandardItem(iterList->filePath);
+			p->setEditable(false);
+			m_pModel->setItem(row,1,p);
 
-				p= new QStandardItem(tData.filePath);
-				p->setEditable(false);
-				m_pModel->setItem(row,1,p);
+			p= new QStandardItem(QString::number(iterList->fileSize));
+			p->setData(iterList->fileSize,Qt::DisplayRole);//设置排序规则
+			p->setEditable(false);
+			m_pModel->setItem(row,2,p);
 
-				p= new QStandardItem(QString::number(tData.fileSize));
-				p->setEditable(false);
-				m_pModel->setItem(row,2,p);
+			p= new QStandardItem(iterList->fileTime.toString());
+			p->setData(iterList->fileTime,Qt::DisplayRole);//设置排序规则
+			p->setEditable(false);
+			m_pModel->setItem(row,3,p);
 
-				p= new QStandardItem(tData.fileTime.toString());
-				p->setEditable(false);
-				m_pModel->setItem(row,3,p);
+			p= new QStandardItem(iterList->fileMD5);
+			p->setEditable(false);
+			m_pModel->setItem(row,4,p);
 
-				p= new QStandardItem(tData.fileMD5);
-				p->setEditable(false);
-				m_pModel->setItem(row,4,p);
+			row++;
 
-				row++;
-			}
+			//QApplication::processEvents();//让界面可以不至于卡死
 		}
 	}
-
-	setSelectionBehavior(QAbstractItemView::SelectRows);//set all a row selected
-	verticalHeader()->setVisible(false); //hide column header
-	this->setShowGrid(false); //hide line
-
 }
-
 void MyTableView::threadFinished()
 {
-	emit setModelSignal();
+	emit screenFileInfoMapSignal();
 }
-
 void MyTableView::showContextMenu(const QPoint &pos)
 {
-	QModelIndex modelIndex=indexAt(pos);
-	if (modelIndex.isValid())
+	QModelIndex proxyIndex=indexAt(pos);
+	if (proxyIndex.isValid())
 	{
-		QAction *checkAciton =m_pContextMenu->exec(QCursor::pos());
+		QAction *checkAciton =m_pContextMenu->exec(QCursor::pos(),0);
+
 		if (checkAciton==m_pOpenDir)
 		{
-			int row = modelIndex.row();
+			QModelIndex sourceIndex = m_pProxyModel->mapToSource(proxyIndex);
+			int row = sourceIndex.row();
+
 			QStandardItem *itemRoot = m_pModel->item(row,1);
-			QStandardItem *itemFile = m_pModel->item(row,0);	
-			QString fileDir = itemRoot->text()+"/"+itemFile->text();
+			QStandardItem *itemFile = m_pModel->item(row,0);
+			QString fileDir = itemRoot->text();
+			QDir dir(fileDir);
+			if(!dir.isRoot())
+				fileDir+="/";
+			fileDir+=itemFile->text();
+
 			OpenExplorerAndSelectFile(fileDir);
-			
 		}
 	}
-	
 }
-
 void MyTableView::deleteSelectedItem()
 {
 	QModelIndexList modelIndexList = this->selectedIndexes();
@@ -409,11 +189,19 @@ void MyTableView::deleteSelectedItem()
 	}
 	else
 	{
-		int row = modelIndexList.front().row();
+		QModelIndex frontProxyIndex = modelIndexList.front();
+		QModelIndex frontSourceIndex = m_pProxyModel->mapToSource(frontProxyIndex);
+		int row = frontSourceIndex.row();
+
 		QStandardItem *itemRoot = m_pModel->item(row,1);
-		QStandardItem *itemFile = m_pModel->item(row,0);	
-		QString fileDir = itemRoot->text()+"/"+itemFile->text();
+		QStandardItem *itemFile = m_pModel->item(row,0);
+		QString fileDir = itemRoot->text();
+		QDir dir(fileDir);
+		if(!dir.isRoot())
+			fileDir+="/";
+		fileDir+=itemFile->text();
 		QFile file(fileDir);
+
 		if(file.remove())
 		{
 			m_pModel->removeRow(row);
@@ -434,10 +222,25 @@ void MyTableView::takeSelectedItem()
 		QMessageBox::about(this,tr("warning"),tr("you can't select any item."));
 	}
 	else
-	{
-		int row = modelIndexList.front().row();
+	{	
+		QModelIndex frontProxyIndex = modelIndexList.front();
+		QModelIndex frontSourceIndex = m_pProxyModel->mapToSource(frontProxyIndex);
+		int row = frontSourceIndex.row();
+
 		m_pModel->takeRow(row);
 	}
 }
 
-
+void MyTableView::screenFileSize( int state,int value)
+{
+	if (state == 0)
+	{
+		m_pProxyModel->setMinSize(-1);
+		m_pProxyModel->reset();
+	}
+	if (state == 2)
+	{
+		m_pProxyModel->setMinSize(value);
+		m_pProxyModel->reset();
+	}
+}

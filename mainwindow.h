@@ -1,10 +1,8 @@
+#pragma once
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QtGui/QWidget>
-#include <QDateTime>
-#include <QFileInfo>
-#include "ui_mainwindow.h"
 class QTabWidget;
 class QPushButton;
 class ProgressBarContainer;
@@ -22,11 +20,9 @@ public:
 	void dirTraverse(QString path);	
 protected:
 	virtual void resizeEvent(QResizeEvent *event);
-	
-private:
-	Ui::MainWindowClass ui;
 
-public slots:
+private:
+	public slots:
 	void runPre();
 	void canCelRun();
 
@@ -36,22 +32,5 @@ private:
 	QPushButton* m_pCancel;
 	ReadThread *readFile;
 	ProgressBarContainer *m_pProgressBarContainer;
-};
-struct tableData
-{
-	QString fileName;
-	QString filePath;
-	qint64 fileSize;
-	QString fileMD5;
-	QDateTime fileTime;
-};
-class cmp
-{
-public:
-	bool operator()(const QString& l,const QString& r)
-	{
-		return l==r;
-	}
-
 };
 #endif // MAINWINDOW_H

@@ -2,7 +2,7 @@
 #include<QtGui/QWidget>
 class SimpleMatchConditions;
 class FileDirList;
-class QListWidget;
+
 class OptionsSetting :
 	public QWidget
 {

@@ -1,9 +1,11 @@
 #pragma once
 #include<QTableView>
-#include <QFileInfo>
+#include "global.h"
 class QStandardItemModel;
 class QMenu;
 class QAction;
+class MySortFilterProxyModel;
+
 class MyTableView :
 	public QTableView
 {
@@ -11,24 +13,27 @@ class MyTableView :
 public:
 	MyTableView(QWidget *parent = NULL);
 	virtual ~MyTableView(void);
-	void screenItem();
-	void addOneItem(QString file,QMultiMap<QString,QString> &MD5Map);
 	void clearItem();
-	void clearModel();
-
+	bool writeResult(QMap<QString, QList<TableData> >&writeFileInfoMap,
+		QString fileName = tr("result.txt"));
+	
 signals:
-	void setModelSignal();
+	void screenFileInfoMapSignal();
 	
 public slots:
-	void setModelSlot();
 	void threadFinished();
+	void screenFileInfoMapSlot();
 	void showContextMenu(const QPoint &);
 	void deleteSelectedItem();
 	void takeSelectedItem();
+	void screenFileSize(int state,int value);
+	void loadResult();
 private:
 	
 	QStandardItemModel *m_pModel;
+	MySortFilterProxyModel *m_pProxyModel;
 	QMenu *m_pContextMenu;
 	QAction *m_pOpenDir;
+
 };
 

@@ -6,6 +6,7 @@ ProgressBarContainer::ProgressBarContainer( QWidget *parent /*= NULL*/ )
 	:QFrame(parent)
 {
 	this->setFrameStyle(QFrame::WinPanel|QFrame::Raised);
+
 	m_pProgressBarStatus = new QLabel("Status:Idle",this);
 	m_pRunProgressBar = new RunProgressBar(this);
 

@@ -6,6 +6,7 @@ SimpleMatchConditions::SimpleMatchConditions( QWidget * parent /*= NULL*/ )
 	this->setFrameStyle(QFrame::WinPanel|QFrame::Raised);
 	
 	m_pTitleLabel = new QLabel(tr("choose your conditons of same file"),this);
+
 	m_pNamesIdentical = new QCheckBox(tr("names are identical"),this);
 	m_pSizesIdentical = new QCheckBox(tr("sizes are identical"),this);
 	m_pMD5Identical = new QCheckBox(tr("MD5 are identical"),this);

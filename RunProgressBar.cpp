@@ -3,7 +3,6 @@
 RunProgressBar::RunProgressBar( QWidget *parent /*= NULL*/ )
 	:QProgressBar(parent)
 {
-
 }
 
 
